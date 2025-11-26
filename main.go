@@ -51,10 +51,14 @@ func main() {
 	m["cpu"] = runQuiet(context.Background(), "busybox", "sh", "-c", "lscpu | awk -F: '/Model name/ {sub(/^ +/,\"\",$2); print $2; exit}'")
 	//m["mem"] = runQuiet(context.Background(), "bash", "-lc", "awk '/MemTotal/ {print $2/1024/1024 \" GB\"}' /proc/meminfo")
 	m["mem"] = runQuiet(context.Background(), "busybox", "sh", "-c", "awk '/MemTotal/ {print $2/1024/1024 \" GB\"}' /proc/meminfo")
-	m["mgmt_ip"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip -o -4 addr show scope global | awk '{print $4}' | head -n1"))
-	m["mgmt_nic"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip -o -4 addr show scope global | awk '{print $2}' | head -n1"))
-	m["gateway"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip route | awk '/default/ {print $3; exit}'"))
-	m["dns"] = runQuiet(context.Background(), "bash", "-lc", "awk '/^nameserver/ {print $2}' /etc/resolv.conf | paste -sd, -")
+	//m["mgmt_ip"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip -o -4 addr show scope global | awk '{print $4}' | head -n1"))
+	m["mgmt_ip"] = firstField(runQuiet(context.Background(), "busybox", "sh", "-c", "ip -o -4 addr show scope global | awk '{print $4}' | head -n1"))
+	//m["mgmt_nic"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip -o -4 addr show scope global | awk '{print $2}' | head -n1"))
+	m["mgmt_nic"] = firstField(runQuiet(context.Background(), "busybox", "sh", "-c", "ip -o -4 addr show scope global | awk '{print $2}' | head -n1"))
+	m["gateway"] = firstField(runQuiet(context.Background(), "busybox", "sh", "-c", "ip route | awk '/default/ {print $3; exit}'"))
+	//m["gateway"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip route | awk '/default/ {print $3; exit}'"))
+	m["dns"] = runQuiet(context.Background(), "busybox", "sh", "-c", "awk '/^nameserver/ {print $2}' /etc/resolv.conf | paste -sd, -")
+	//m["dns"] = runQuiet(context.Background(), "bash", "-lc", "awk '/^nameserver/ {print $2}' /etc/resolv.conf | paste -sd, -")
 	keys := []string{
 		"hostname",
 		"kernel",
