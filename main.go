@@ -32,7 +32,10 @@ func firstLine(s string) string {
 }
 
 func runQuiet(ctx context.Context, name string, args ...string) string {
-	out, _ := exec.CommandContext(ctx, name, args...).CombinedOutput()
+	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
+	if err != nil {
+		fmt.Println(err)
+	}
 	return strings.TrimSpace(string(out))
 }
 func main() {
@@ -41,10 +44,13 @@ func main() {
 	m["kernel"] = runQuiet(context.Background(), "uname", "-r")
 	m["serial"] = runQuiet(context.Background(), "dmidecode", "-s", "system-serial-number")
 	m["model"] = runQuiet(context.Background(), "dmidecode", "-s", "system-product-name")
-	m["bios"] = runQuiet(context.Background(), "bash", "-lc", "dmidecode -t bios | sed -n '1,6p' | tr -s ' '")
+	//m["bios"] = runQuiet(context.Background(), "bash", "-lc", "dmidecode -t bios | sed -n '1,6p' | tr -s ' '")
+	m["bios"] = runQuiet(context.Background(), "busybox", "sh", "-c", "dmidecode -t bios | sed -n '1,6p' | tr -s ' '")
 	m["uptime"] = runQuiet(context.Background(), "uptime", "-p")
-	m["cpu"] = runQuiet(context.Background(), "bash", "-lc", "lscpu | awk -F: '/Model name/ {sub(/^ +/,\"\",$2); print $2; exit}'")
-	m["mem"] = runQuiet(context.Background(), "bash", "-lc", "awk '/MemTotal/ {print $2/1024/1024 \" GB\"}' /proc/meminfo")
+	//m["cpu"] = runQuiet(context.Background(), "bash", "-lc", "lscpu | awk -F: '/Model name/ {sub(/^ +/,\"\",$2); print $2; exit}'")
+	m["cpu"] = runQuiet(context.Background(), "busybox", "sh", "-c", "lscpu | awk -F: '/Model name/ {sub(/^ +/,\"\",$2); print $2; exit}'")
+	//m["mem"] = runQuiet(context.Background(), "bash", "-lc", "awk '/MemTotal/ {print $2/1024/1024 \" GB\"}' /proc/meminfo")
+	m["mem"] = runQuiet(context.Background(), "busybox", "sh", "-c", "awk '/MemTotal/ {print $2/1024/1024 \" GB\"}' /proc/meminfo")
 	m["mgmt_ip"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip -o -4 addr show scope global | awk '{print $4}' | head -n1"))
 	m["mgmt_nic"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip -o -4 addr show scope global | awk '{print $2}' | head -n1"))
 	m["gateway"] = firstField(runQuiet(context.Background(), "bash", "-lc", "ip route | awk '/default/ {print $3; exit}'"))
