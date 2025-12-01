@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"strconv"
@@ -21,20 +22,22 @@ const (
 	pathResolvConf       = "/etc/resolv.conf"
 )
 
+func getHostName() string {
+	name, err := os.Hostname()
+	if err != nil {
+		slog.Debug("failed to get hostname", "err", err)
+		return ""
+	}
+	return name
+}
+
 func readSysFile(path string) string {
 	content, err := os.ReadFile(path)
-	if path == pathDMIProductSerial {
-		if err != nil {
-			return ""
-		}
-		return "Not Specified"
-	} else {
-		if err != nil {
-			return ""
-		}
-		return strings.TrimSpace(string(content))
+	if err != nil {
+		slog.Debug("Failed to read file", "err", err)
+		return ""
 	}
-
+	return strings.TrimSpace(string(content))
 }
 
 func getSystemUptime(path string) string {
@@ -48,6 +51,7 @@ func getSystemUptime(path string) string {
 	}
 	totalSecondsFloat, err := strconv.ParseFloat(parts[0], 64)
 	if err != nil {
+		slog.Debug("Failed to parse uptime", "err", err)
 		return ""
 	}
 	uptime := int64(totalSecondsFloat)
@@ -98,9 +102,10 @@ func plural(value int64) string {
 	return ""
 }
 
-func getCPUModel(path string) string {
-	file, err := os.Open(path)
+func getCPUModel() string {
+	file, err := os.Open("/proc/cpuinfo")
 	if err != nil {
+		slog.Debug("error opening /proc/cpuinfo", "err", err)
 		return ""
 	}
 	defer file.Close()
@@ -118,9 +123,10 @@ func getCPUModel(path string) string {
 	return ""
 }
 
-func getTotalMemory(path string) string {
-	file, err := os.Open(path)
+func getTotalMemory() string {
+	file, err := os.Open("/proc/meminfo")
 	if err != nil {
+		slog.Error("error opening /proc/meminfo", "err", err)
 		return ""
 	}
 	defer file.Close()
@@ -144,6 +150,7 @@ func getTotalMemory(path string) string {
 func getPrimaryNetwork() (string, string) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
+		slog.Debug("Error getting interfaces", "err", err)
 		return "", ""
 	}
 	for _, i := range ifaces {
@@ -163,8 +170,8 @@ func getPrimaryNetwork() (string, string) {
 	return "", ""
 }
 
-func getDefaultGateway(path string) string {
-	file, err := os.Open(path)
+func getDefaultGateway() string {
+	file, err := os.Open("/proc/net/route")
 	if err != nil {
 		return ""
 	}
@@ -185,9 +192,10 @@ func getDefaultGateway(path string) string {
 	return ""
 }
 
-func getDNS(path string) string {
-	file, err := os.Open(path)
+func getDNS() string {
+	file, err := os.Open("/etc/resolv.conf")
 	if err != nil {
+		slog.Error("error opening /etc/resolv.conf", "err", err)
 		return ""
 	}
 	defer file.Close()
@@ -207,16 +215,16 @@ func getDNS(path string) string {
 }
 func main() {
 	m := map[string]string{}
-	m["hostname"], _ = os.Hostname()
+	m["hostname"] = getHostName()
 	m["kernel"] = readSysFile(pathProcKernel)
 	m["serial"] = readSysFile(pathDMIProductSerial)
 	m["model"] = readSysFile(pathDMIProductName)
 	m["bios"] = readSysFile(pathDMIBiosVersion)
 	m["uptime"] = getSystemUptime(pathProcUptime)
-	m["cpu"] = getCPUModel(pathProcCPUInfo)
-	m["mem"] = getTotalMemory(pathProcMemInfo)
-	m["gateway"] = getDefaultGateway(pathProcNetRoute)
-	m["dns"] = getDNS(pathResolvConf)
+	m["cpu"] = getCPUModel()
+	m["mem"] = getTotalMemory()
+	m["gateway"] = getDefaultGateway()
+	m["dns"] = getDNS()
 	ip, nic := getPrimaryNetwork()
 	m["mgmt_ip"] = ip
 	m["mgmt_nic"] = nic
